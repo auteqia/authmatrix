@@ -830,6 +830,12 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                 # TODO currently can load exention settings, but this is saved for Burp and not for the Project specifically
                 # self._db.loadJson(self._callbacks.loadExtensionSetting("AUTHMATRIX"),self)
 
+            JOptionPane.showMessageDialog(self._splitpane,
+                "Loaded: %d user(s), %d role(s), %d request(s), %d chain(s).\n(If 0 everywhere, see Extensions > AuthMatrix > Output/Errors)" % (
+                    self._db.getActiveUserCount(), self._db.getActiveRoleCount(),
+                    self._db.getActiveMessageCount(), self._db.getActiveChainCount()),
+                "AuthMatrix Load", JOptionPane.INFORMATION_MESSAGE)
+
             self._userTable.redrawTable()
             self._messageTable.redrawTable()
             self._chainTable.redrawTable()
@@ -1885,13 +1891,12 @@ class MatrixDB():
             stateDict["arrayOfUsers"].append({
                     "index":userEntry._index,
                     "name":userEntry._name if not deleted else None,
-                    "roles":userEntry._roles if not deleted else {},
+                    "roles":{int(k): bool(v) for k, v in userEntry._roles.items()} if not deleted else {},
                     "deleted":deleted,
                     "enabled":userEntry._enabled,
                     "tableRow":userEntry._tableRow if not deleted else None,
                     "cookiesBase64":base64.b64encode(userEntry._cookies.encode("utf-8")) if userEntry._cookies and not deleted else "",
-                    "headersBase64":[base64.b64encode(x.encode("utf-8")) if x else "" for x in userEntry._headers] if not deleted else [],
-                    "chainResults":userEntry._chainResults if not deleted else {}
+                    "headersBase64":[base64.b64encode(x.encode("utf-8")) if x else "" for x in userEntry._headers] if not deleted else []
                 })
 
         stateDict["arrayOfMessages"] = []
@@ -1905,16 +1910,13 @@ class MatrixDB():
                     "port":messageEntry._requestResponse.getHttpService().getPort() if not deleted else None,
                     "protocol":messageEntry._requestResponse.getHttpService().getProtocol() if not deleted else None,
                     "name":messageEntry._name if not deleted else None, 
-                    "roles":messageEntry._roles if not deleted else {}, 
+                    "roles":{int(k): bool(v) for k, v in messageEntry._roles.items()} if not deleted else {},
                     "regexBase64":base64.b64encode(messageEntry._regex.encode("utf-8")) if messageEntry._regex and not deleted else "", 
                     "deleted":deleted,
                     "enabled":messageEntry._enabled,
-                    "failureRegexMode":messageEntry._failureRegexMode if not deleted else None,
-                    "runBase64ForUserID":{int(x): {
-                        "request": None if not messageEntry._userRuns[x] or not messageEntry._userRuns[x].getRequest() else base64.b64encode(StringUtil.fromBytes(messageEntry._userRuns[x].getRequest()).encode("utf-8")),
-                        "response": None if not messageEntry._userRuns[x] or not messageEntry._userRuns[x].getResponse() else base64.b64encode(StringUtil.fromBytes(messageEntry._userRuns[x].getResponse()).encode("utf-8"))}
-                        for x in messageEntry._userRuns.keys()} if not deleted else {},
-                    "runResultForRoleID":messageEntry._roleResults if not deleted else {}
+                    # NOTE (UI fix): run requests/responses are no longer saved: Load never
+                    # read them back and they made the file huge (180+ MB) -> just re-Run
+                    "failureRegexMode":messageEntry._failureRegexMode if not deleted else None
                 })
 
         stateDict["arrayOfChains"] = []
